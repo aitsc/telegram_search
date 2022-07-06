@@ -42,6 +42,14 @@ def search(dialog_re, message_re, limit=20, options='$i', show=False):
                     "$regex": message_re,
                     "$options": options,
                 }},
+                {"media.webpage.title": {
+                    "$regex": message_re,
+                    "$options": options,
+                }},
+                {"media.webpage.description": {
+                    "$regex": message_re,
+                    "$options": options,
+                }},
             ]
         }},
         {"$sort": {"date": -1}},
@@ -50,6 +58,8 @@ def search(dialog_re, message_re, limit=20, options='$i', show=False):
             "dialog_id": "$dialog_id",
             "message": "$message",
             "file_name": "$file_name",
+            "web_title": "$media.webpage.title",
+            "web_description": "$media.webpage.description",
             "date": "$date",
             "user": {"$concat": [{"$ifNull": ["$user_ln", ""]}, " ", {"$ifNull": ["$user_fn", ""]}]},
         }},
