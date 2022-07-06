@@ -130,7 +130,7 @@ def get_messages(client: telethon.TelegramClient, dialog_id=-1001078465602,
     matched_count = modified_count = upserted_count = 0
     # 创建索引
     if collection is not None:
-        for i in ['post', 'id', 'dialog_id', 'date', 'user_id']:
+        for i in ['pinned', 'id', 'dialog_id', 'date', 'user_id']:
             collection.create_index([(i, pymongo.ASCENDING)], unique=False, background=True)
     # 开始获取消息
     bar = client.iter_messages(dialog_id, limit=limit, reverse=True, **paras)
@@ -146,7 +146,7 @@ def get_messages(client: telethon.TelegramClient, dialog_id=-1001078465602,
         if message.message is None or message.message.strip() == '':
             continue
         message_ = to_int64({
-            'post': message.post,  # bool, 此消息是否是广播频道中的帖子
+            'pinned': message.pinned,  # bool, 此消息此时是否是置顶帖子
             'id': message.id,  # int, 消息id
             'dialog_id': dialog_id,  # int, 也可以参考 message.peer_id.channel_id, telethon.tl.types.PeerChannel
             'date': message.date,  # datetime.datetime, 发布时间
@@ -196,4 +196,4 @@ if __name__ == '__main__':
             get_messages(client, dialog_id=dialog['id'], collection=db_messages,
                          tqdm_desc='{} ID({}): {}'.format(i+1, dialog['id'], dialog['title']))
         print(datetime.now())
-        time.sleep(300)  # 隔多少秒再循环一次
+        time.sleep(600)  # 隔多少秒再循环一次
