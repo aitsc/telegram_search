@@ -1,2 +1,3 @@
 session_name.session*
 config.json
+__pycache__
