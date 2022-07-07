@@ -1,5 +1,6 @@
 from info import db_dialogs, db_messages
 from pprint import pprint
+import time
 
 
 def search(dialog_re, message_re, limit=20, options='$i', show=False):
@@ -23,6 +24,10 @@ def search(dialog_re, message_re, limit=20, options='$i', show=False):
                 "$options": '$i',
             },
         }},
+        {"$project": {
+            "id": "$id",
+            "title": "$title",
+        }},
     ])}
     if show and dialog_re:
         print('='*20, '检索到的群组/频道({}):'.format(len(dialogs_id_title)), dialog_re)
@@ -30,9 +35,10 @@ def search(dialog_re, message_re, limit=20, options='$i', show=False):
     if message_re is None or len(message_re) == 0:
         return dialogs_id_title, []
     # 检索消息
+    start = time.time()
     messages_ret = list(db_messages.aggregate([
         {"$match": {
-            "dialog_id": {"$in": list(dialogs_id_title)},
+            **({"dialog_id": {"$in": list(dialogs_id_title)}} if dialog_re else {}),
             "$or": [
                 {"message": {
                     "$regex": message_re,
@@ -67,14 +73,14 @@ def search(dialog_re, message_re, limit=20, options='$i', show=False):
     for m in messages_ret:
         m['dialog'] = dialogs_id_title[m['dialog']]
     if show:
-        print('='*20, '检索到的消息({}):'.format(len(messages_ret)), message_re)
+        print(round(time.time()-start,1), '='*20, '检索到的消息({}):'.format(len(messages_ret)), message_re)
         pprint(messages_ret)
     return dialogs_id_title, messages_ret
 
 
 if __name__ == '__main__':
-    # 检索群组/频道的正则
-    dialog_re = "surge"
+    # 检索群组/频道的正则, 留空就是搜索全部
+    dialog_re = ""
     # 检索消息的正则
     message_re = '国内.*VPS'
     # 最多返回的消息数量
