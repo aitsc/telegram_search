@@ -78,8 +78,10 @@ def search(dialog_re, message_re, limit=20, options='$i', show=False):
         }},
         {"$sort": {"date": -1}},
         {"$limit": limit},
+        {"$lookup": {"from": "dialogs", "localField": "dialog_id", "foreignField": "id", "as": "dialog"}},
+        {"$unwind": {"path": "$dialog"}},
         {"$project": {
-            "dialog": "$dialog_id",
+            "dialog": "$dialog.title",
             "message": "$message",
             "file_name": "$file_name",
             "web_title": "$media.webpage.title",
@@ -88,8 +90,6 @@ def search(dialog_re, message_re, limit=20, options='$i', show=False):
             "user": {"$concat": [{"$ifNull": ["$user_ln", ""]}, " ", {"$ifNull": ["$user_fn", ""]}]},
         }},
     ]))
-    for m in messages_ret:  # id 变名称
-        m['dialog'] = dialogs_id_title[m['dialog']]
     if show:
         print(round(time.time()-start, 1), '='*20, '检索到的消息({}):'.format(len(messages_ret)), message_re)
         pprint(messages_ret)
