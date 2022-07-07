@@ -55,7 +55,7 @@ def search(dialog_re, message_re, limit=20, options='$i', show=False):
         {"$sort": {"date": -1}},
         {"$limit": limit},
         {"$project": {
-            "dialog_id": "$dialog_id",
+            "dialog": "$dialog_id",
             "message": "$message",
             "file_name": "$file_name",
             "web_title": "$media.webpage.title",
@@ -64,6 +64,8 @@ def search(dialog_re, message_re, limit=20, options='$i', show=False):
             "user": {"$concat": [{"$ifNull": ["$user_ln", ""]}, " ", {"$ifNull": ["$user_fn", ""]}]},
         }},
     ]))
+    for m in messages_ret:
+        m['dialog'] = dialogs_id_title[m['dialog']]
     if show:
         print('='*20, '检索到的消息({}):'.format(len(messages_ret)), message_re)
         pprint(messages_ret)
