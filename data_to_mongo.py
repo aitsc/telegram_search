@@ -130,7 +130,7 @@ def get_messages(client: telethon.TelegramClient, dialog_id=-1001078465602,
     matched_count = modified_count = upserted_count = 0
     # 创建索引
     if collection is not None:
-        for i in ['pinned', 'id', 'dialog_id', 'date', 'user_id']:
+        for i in ['pinned', 'id', 'dialog_id', 'date', 'user_id', 'reply_to.reply_to_msg_id']:
             collection.create_index([(i, pymongo.ASCENDING)], unique=False, background=True)
     # 开始获取消息
     bar = client.iter_messages(dialog_id, limit=limit, reverse=True, **paras)

@@ -117,5 +117,5 @@ if __name__ == '__main__':
     # 检索消息的正则
     message_re = '^(?=.*推荐)(?=.*(vps|nat))'
     # 最多返回的消息数量
-    limit = 30
+    limit = 50
     search(dialog_re, message_re, limit=limit, show=True)
