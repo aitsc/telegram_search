@@ -81,18 +81,33 @@ def search(dialog_re, message_re, limit=20, options='$i', show=False):
         {"$lookup": {"from": "dialogs", "localField": "dialog_id", "foreignField": "id", "as": "dialog"}},
         {"$unwind": {"path": "$dialog"}},
         {"$project": {
+            "dialog_id": "$dialog_id",
+            "id": "$id",
             "dialog": "$dialog.title",
             "message": "$message",
             "file_name": "$file_name",
             "web_title": "$media.webpage.title",
             "web_description": "$media.webpage.description",
             "date": "$date",
-            "user": {"$concat": [{"$ifNull": ["$user_ln", ""]}, " ", {"$ifNull": ["$user_fn", ""]}]},
+            "user": {"$concat": [
+                {"$ifNull": ["$user_ln", ""]},
+                " ", {"$ifNull": ["$user_fn", ""]},
+                " @", {"$ifNull": ["$username", ""]},
+            ]},
         }},
     ]))
+    # 搜索回复信息
+    for m in messages_ret:
+        reply = list(db_messages.find({'dialog_id': m['dialog_id'], 'reply_to.reply_to_msg_id': m['id']}))
+        if reply:
+            m['reply_message'] = [r['message'] for r in reply]
+        # 删除不重要的字段
+        del m['dialog_id']
+        del m['id']
+        del m['_id']
     if show:
         print(round(time.time()-start, 1), '='*20, '检索到的消息({}):'.format(len(messages_ret)), message_re)
-        pprint(messages_ret)
+        pprint([{i+1: m} for i, m in enumerate(messages_ret)])
     return dialogs_id_title, messages_ret
 
 
@@ -100,7 +115,7 @@ if __name__ == '__main__':
     # 检索群组/频道的正则, 留空就是搜索全部
     dialog_re = ""
     # 检索消息的正则
-    message_re = '^(?=.*国内)(?=.*nat)'
+    message_re = '^(?=.*推荐)(?=.*(vps|nat))'
     # 最多返回的消息数量
-    limit = 20
+    limit = 30
     search(dialog_re, message_re, limit=limit, show=True)
