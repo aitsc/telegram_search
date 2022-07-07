@@ -107,7 +107,7 @@ def search(dialog_re, message_re, limit=20, options='$i', show=False):
         del m['_id']
     if show:
         print(round(time.time()-start, 1), '='*20, '检索到的消息({}):'.format(len(messages_ret)), message_re)
-        pprint([{i+1: m} for i, m in enumerate(messages_ret)])
+        pprint([(i+1, m) for i, m in enumerate(messages_ret)])
     return dialogs_id_title, messages_ret
 
 
