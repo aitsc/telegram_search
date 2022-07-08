@@ -7,7 +7,13 @@
 
 # 教程
 1. 前往 https://my.telegram.org 获取 api_id 和 api_hash
-2. 安装 mongodb
+2. 安装 mongodb, 例如:
+   - wget https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-ubuntu2004-5.0.9.tgz
+   - tar -xvf mongodb-* && cd mongodb-* && mkdir data
+   - ./bin/mongod --dbpath ./data --bind_ip 0.0.0.0 --port 27017 --auth
+   - ./bin/mongo
+   - use admin
+   - db.auth("user","password")
 3. 将 config_example.json 改名为 config.json 并将其中的参数修改为自己的信息
 4. 安装 python3, 执行 pip install -r requirements.txt 安装相关包
 5. 执行 python -u data_to_mongo.py 实时获取群和频道消息到数据库. 终止后再运行会自动接着数据库中最新消息接着下载
