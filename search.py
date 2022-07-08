@@ -78,11 +78,19 @@ def search(dialog_re, message_re, limit=20, options='$i', show=False):
         }},
         {"$sort": {"date": -1}},
         {"$limit": limit},
+        {"$lookup": {
+            "from": "messages",
+            "let": {"dialog_id": "$dialog_id", "id": "$id"},
+            "pipeline": [
+                {"$match": {"$expr": {"$eq": ["$$dialog_id", "$dialog_id"]}}},
+                {"$match": {"$expr": {"$eq": ["$$id", "$reply_to.reply_to_msg_id"]}}},
+            ],
+            "as":"reply",
+        }},
+        # {"$match": {"reply.message": {"$exists": True}}},
         {"$lookup": {"from": "dialogs", "localField": "dialog_id", "foreignField": "id", "as": "dialog"}},
         {"$unwind": {"path": "$dialog"}},
         {"$project": {
-            "dialog_id": "$dialog_id",
-            "id": "$id",
             "dialog": "$dialog.title",
             "message": "$message",
             "file_name": "$file_name",
@@ -94,17 +102,9 @@ def search(dialog_re, message_re, limit=20, options='$i', show=False):
                 " ", {"$ifNull": ["$user_fn", ""]},
                 " @", {"$ifNull": ["$username", ""]},
             ]},
+            "reply_message": "$reply.message",
         }},
     ]))
-    # 搜索回复信息
-    for m in messages_ret:
-        reply = list(db_messages.find({'dialog_id': m['dialog_id'], 'reply_to.reply_to_msg_id': m['id']}))
-        if reply:
-            m['reply_message'] = [r['message'] for r in reply]
-        # 删除不重要的字段
-        del m['dialog_id']
-        del m['id']
-        del m['_id']
     if show:
         print(round(time.time()-start, 1), '='*20, '检索到的消息({}):'.format(len(messages_ret)), message_re)
         pprint([(i+1, m) for i, m in enumerate(messages_ret)])
