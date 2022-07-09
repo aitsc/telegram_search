@@ -88,6 +88,7 @@ def search(dialog_re, message_re, limit=20, options='$i', show=False):
             "as":"reply",
         }},
         # {"$match": {"reply.message": {"$exists": True}}},
+        # {"$limit": limit},
         {"$lookup": {"from": "dialogs", "localField": "dialog_id", "foreignField": "id", "as": "dialog"}},
         {"$unwind": {"path": "$dialog"}},
         {"$project": {
@@ -96,6 +97,7 @@ def search(dialog_re, message_re, limit=20, options='$i', show=False):
             "file_name": "$file_name",
             "web_title": "$media.webpage.title",
             "web_description": "$media.webpage.description",
+            "date": {"$add": {"startDate": "$date", "unit": "hour", "amount": 8}},  # mongodb 5.0
             "date": "$date",
             "user": {"$concat": [
                 {"$ifNull": ["$user_ln", ""]},
