@@ -135,6 +135,7 @@ def get_messages(client: telethon.TelegramClient, dialog_id=-1001078465602,
     # 开始获取消息
     bar = client.iter_messages(dialog_id, limit=limit, reverse=True, **paras)
     if tqdm_desc is not None:
+        print(tqdm_desc)  # 有时 iter_messages 出错
         for message in client.iter_messages(dialog_id, limit=1, reverse=False):
             total = message.id  # 计算总数. 不是太准, 中间可能有删除的消息, 后面也有可能新增消息
             if 'max_id' in paras:

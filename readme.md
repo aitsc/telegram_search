@@ -7,7 +7,7 @@
 
 # 教程
 1. 前往 https://my.telegram.org 获取 api_id 和 api_hash
-2. 安装 mongodb, 例如:
+2. 安装 [mongodb](https://www.mongodb.com/try/download/community), 例如:
    - wget https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-ubuntu2004-5.0.9.tgz
    - tar -xvf mongodb-* && cd mongodb-* && mkdir data
    - ./bin/mongod --dbpath ./data --bind_ip 0.0.0.0 --port 27017 --auth
