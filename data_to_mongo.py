@@ -190,9 +190,12 @@ if __name__ == '__main__':
         dialog_L = get_dialogs(client, collection=db_dialogs, exclude_name=exclude_name)  # 获取群
         for i, dialog in enumerate(dialog_L):
             now = datetime.utcnow().replace(tzinfo=pytz.timezone('UTC'))
-            if now - dialog['date'] > timedelta(hours=24*365*50):  # 太长时间没有消息的就跳过(哪怕是首次)
-                print('跳过:', dialog['id'], dialog['title'])
-                continue
+            try:
+                if now - dialog['date'] > timedelta(hours=24*365*50):  # 太长时间没有消息的就跳过(哪怕是首次)
+                    print('跳过:', dialog['id'], dialog['title'])
+                    continue
+            except:
+                print('日期计算出错')
             # 获取消息
             get_messages(client, dialog_id=dialog['id'], collection=db_messages,
                          tqdm_desc='{} ID({}): {}'.format(i+1, dialog['id'], dialog['title']))
