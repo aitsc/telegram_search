@@ -187,7 +187,13 @@ if __name__ == '__main__':
     # 不断循环获取群和消息
     while True:
         print(datetime.now())
-        dialog_L = get_dialogs(client, collection=db_dialogs, exclude_name=exclude_name)  # 获取群
+        while True:
+            try:
+                dialog_L = get_dialogs(client, collection=db_dialogs, exclude_name=exclude_name)  # 获取群
+                break
+            except BaseException as e:
+                print('出错,10秒后再尝试:', e)
+                time.time(10)
         for i, dialog in enumerate(dialog_L):
             now = datetime.utcnow().replace(tzinfo=pytz.timezone('UTC'))
             try:
