@@ -193,7 +193,7 @@ if __name__ == '__main__':
                 break
             except BaseException as e:
                 print('出错,10秒后再尝试:', e)
-                time.time(10)
+                time.sleep(10)
         for i, dialog in enumerate(dialog_L):
             now = datetime.utcnow().replace(tzinfo=pytz.timezone('UTC'))
             try:
