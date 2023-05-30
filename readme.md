@@ -23,14 +23,16 @@
 8. 执行 python mongo_analysis.py 统计数据库中的群/频道和用户信息
    - 例如: <img src="stat.png" width = "350" alt="" align=center />
 9. 搭建带有中文分词的es并执行 python es_index.py 将数据索引在es中, 可以用 elasticsearch-head 进行检索
+   - 例如: <img src="es-head.png" width = "600" alt="" align=center />
 ```json
 {
+  "_source": ["message", "reply_msg", "dialog", "date", "user_fn"],
   "query": {
     "function_score": {
       "query": {
         "query_string": {
-          "query": "国内 AND nat",
-          "default_field": "reply_msg"
+          "query": "api AND 被封",
+          "fields": ["message", "reply_msg"]
         }
       },
       "script_score": {
@@ -54,3 +56,4 @@
 2. data_to_mongo.py
 3. search.py
 4. mongo_analysis.py
+5. es_index.py

@@ -65,6 +65,9 @@ def es_creat(client, index_name):
                 "date_timestamp": {
                     "type": "double"
                 },
+                "create_timestamp": {
+                    "type": "double"
+                },
                 "id": {
                     "type": "long",
                 },
@@ -126,6 +129,7 @@ def doc_to_es(item, dialog_id8name):
         **({'user_fn': item['user_fn']} if 'user_fn' in item else {}),
         **({'username': item['username']} if 'username' in item else {}),
         'date_timestamp': item['date'].replace(tzinfo=pytz.utc).timestamp(),
+        'create_timestamp': item['acquisition_time'].replace(tzinfo=pytz.utc).timestamp(),
         'id': item['id'],
         **({'reply_id': reply_id} if reply_msg else {}),
         'dialog_id': item['dialog_id'],
@@ -142,17 +146,17 @@ def update_mongo_to_es(client, index_name):
             "match_all": {}
         },
         "sort": {
-            'date_timestamp': {"order": "desc"}
+            'create_timestamp': {"order": "desc"}
         }
     }
     es_res = client.search(index=index_name, body=body)
     if es_res['hits']['hits']:
-        start_time = es_res['hits']['hits'][0]['_source']['date_timestamp']
-        _filter = {'date': {'$gte': datetime.fromtimestamp(start_time)}}
+        start_time = es_res['hits']['hits'][0]['_source']['create_timestamp']
+        _filter = {'acquisition_time': {'$gte': datetime.fromtimestamp(start_time)}}
     else:
         _filter = {}
     count = db_messages.count_documents(_filter)
-    info = db_messages.find(_filter).sort('date', 1)
+    info = db_messages.find(_filter).sort('acquisition_time', 1)
 
     dialog_id8name = {item['id']: item['name'][0]['title'] for item in db_dialogs.find({})}
     upsert_data = []
@@ -177,10 +181,11 @@ def update_mongo_to_es(client, index_name):
 
 
 if __name__ == "__main__":
-    # delete_index(global_es_client, 'telegram')
+    index_name = 'telegram_messages'
+    # delete_index(global_es_client, index_name)
     while True:
         try:
-            info = update_mongo_to_es(global_es_client, 'telegram')
+            info = update_mongo_to_es(global_es_client, index_name)
             if sum(info['num'].values()):
                 logging.warn(str(info))
         except:

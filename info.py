@@ -17,7 +17,7 @@ while True:
         db_dialogs = my_db['dialogs']
         # 创建索引
         if db_messages is not None:
-            for i in ['pinned', 'id', 'dialog_id', 'date', 'user_id', 'reply_to.reply_to_msg_id']:
+            for i in ['pinned', 'id', 'dialog_id', 'date', 'acquisition_time', 'user_id', 'reply_to.reply_to_msg_id']:
                 db_messages.create_index([(i, pymongo.ASCENDING)], unique=False, background=True)
         db_messages.create_index([
             ('dialog_id', pymongo.ASCENDING),
