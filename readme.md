@@ -14,7 +14,7 @@
    - ./bin/mongo
      - use admin
      - db.auth("user","password")
-3. 将 config_example.json 改名为 config.json 并将其中的参数修改为自己的信息
+3. 将 config_example.jsonc 改名为 config.jsonc 并将其中的参数修改为自己的信息
 4. 安装 python3, 执行 pip install -r requirements.txt 安装相关包
 5. 执行 python -u data_to_mongo.py 实时获取群和频道消息到数据库. 终止后再运行会自动接着数据库中最新消息接着下载
    - 消息存储例子: <img src="message.png" width = "350" alt="" align=center />
@@ -23,9 +23,9 @@
 7. 用搜索到的 message 整句在客户端中检索找到上下文
 8. 执行 python mongo_analysis.py 统计数据库中的群/频道和用户信息
    - 例如: <img src="stat.png" width = "350" alt="" align=center />
+9. 搭建带有中文分词的es并执行 python es_index.py 将数据索引在es中, 可以用 elasticsearch-head 进行检索
 
 # 计划
-- 扩充分词等字段, 用于快速检索
 - 其他分析, 例如群每日活跃/用户活跃/话题趋势等等
 - 更加强大的模糊检索web界面, 展示上下文
 

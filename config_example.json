@@ -1,7 +1,0 @@
-{
-    "api_id": "12345678",
-    "api_hash": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-    "mongo_url": "mongodb://user:password@127.0.0.1:27017/",
-    "mongo_db": "database_name",
-    "exclude_name": ["排除的频道和群组的名称"]
-}

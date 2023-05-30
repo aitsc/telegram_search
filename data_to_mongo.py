@@ -7,7 +7,9 @@ import bson
 import time
 from pymongo.collection import Collection
 import pytz
-from info import client, db_dialogs, db_messages, exclude_name
+from info import get_te_client, db_dialogs, db_messages, exclude_name
+
+client = get_te_client()
 
 
 def to_int64(d):

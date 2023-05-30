@@ -2,3 +2,5 @@ pymongo
 telethon
 tqdm
 pytz
+commentjson
+elasticsearch

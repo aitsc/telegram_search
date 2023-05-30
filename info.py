@@ -1,10 +1,11 @@
 import pymongo
-import json
+import commentjson as json
 import telethon
 import time
+from elasticsearch import Elasticsearch
 
 # 配置文件
-with open('config.json', 'r', encoding='utf8') as r:
+with open('config.jsonc', 'r', encoding='utf8') as r:
     config = json.load(r)
 exclude_name = config['exclude_name']
     
@@ -20,4 +21,14 @@ while True:
         time.sleep(30)
 
 # telegram 客户端
-client = telethon.TelegramClient('session_name', config['api_id'], config['api_hash'])
+def get_te_client():
+    client = telethon.TelegramClient('session_name', config['api_id'], config['api_hash'])
+    return client
+
+# es 客户端
+user = config['es']['account']['readwrite']['user']
+password = config['es']['account']['readwrite']['password']
+host = config['es']['host']
+port = config['es']['port']
+url = "http://%s:%s@%s:%s" % (user, password, host, port)
+global_es_client = Elasticsearch(url)
