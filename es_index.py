@@ -116,31 +116,35 @@ def update_mongo_to_es(client, index_name):
     es_res = client.search(index=index_name, body=body)
     if es_res['hits']['hits']:
         start_time = es_res['hits']['hits'][0]['_source']['date_timestamp']
-        info = db_messages.find({'date': {'$gt': datetime.fromtimestamp(start_time)}})
+        info = db_messages.find({'date': {'$gte': datetime.fromtimestamp(start_time)}}).sort('date', 1)
     else:
-        info = db_messages.find({})
+        info = db_messages.find({}).sort('date', 1)
 
     dialog_id8name = {item['id']: item['name'][0]['title'] for item in db_dialogs.find({})}
     upsert_data = []
     upsert_num = 0
-    for item in tqdm(info, '数据索引中'):
-        if len(upsert_data) >= 10 ** 4:
+    first_data = next(info, None)
+    
+    if first_data is not None:
+        upsert_data.append(first_data)
+        for item in tqdm(info, '数据索引中'):
+            if len(upsert_data) >= 10 ** 4:
+                es_bulk(client, index_name, upsert_data)
+                upsert_data = []
+            upsert_data.append({
+                '_id': str(item['_id']),
+                'dialog': dialog_id8name[item['dialog_id']],
+                'message': item['message'],
+                'date': str(item['date']),
+                'user_fn': item.get('user_fn', ''),
+                'username': item.get('username', ''),
+                'date_timestamp': item['date'].replace(tzinfo=pytz.utc).timestamp(),
+                'id': item['id'],
+                'dialog_id': item['dialog_id'],
+                'user_id': item.get('user_id', -1),
+            })
+        if upsert_data:
             es_bulk(client, index_name, upsert_data)
-            upsert_data = []
-        upsert_data.append({
-            '_id': str(item['_id']),
-            'dialog': dialog_id8name[item['dialog_id']],
-            'message': item['message'],
-            'date': str(item['date']),
-            'user_fn': item.get('user_fn', ''),
-            'username': item.get('username', ''),
-            'date_timestamp': item['date'].replace(tzinfo=pytz.utc).timestamp(),
-            'id': item['id'],
-            'dialog_id': item['dialog_id'],
-            'user_id': item.get('user_id', -1),
-        })
-    if upsert_data:
-        es_bulk(client, index_name, upsert_data)
         
     return {
         'num': {
@@ -150,7 +154,7 @@ def update_mongo_to_es(client, index_name):
 
 
 if __name__ == "__main__":
-    # delete_index(global_es_client, 'telegram')
+    delete_index(global_es_client, 'telegram')
     while True:
         try:
             info = update_mongo_to_es(global_es_client, 'telegram')
