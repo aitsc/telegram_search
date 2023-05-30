@@ -51,6 +51,11 @@ def es_creat(client, index_name):
                 "date": {
                     "type": "text"
                 },
+                "reply_msg": {
+                    "type": "text",
+                    "analyzer": "ik_max_word",
+                    "search_analyzer": "ik_smart"
+                },
                 "user_fn": {
                     "type": "text"
                 },
@@ -61,6 +66,9 @@ def es_creat(client, index_name):
                     "type": "double"
                 },
                 "id": {
+                    "type": "long",
+                },
+                "reply_id": {
                     "type": "long",
                 },
                 "dialog_id": {
@@ -77,6 +85,7 @@ def es_creat(client, index_name):
 
 
 def delete_index(client, index_name):
+    input('确认要删除索引吗? (按回车继续)')
     client.indices.delete(index=index_name)
     logging.warn(index_name + ' is deleted')
 
@@ -99,6 +108,29 @@ def es_bulk(client, index_name, data, op_type='index'):
                         chunk_size=3000, thread_count=8), maxlen=0)
     logging.debug('op_type:'+op_type+' ,number is:' + str(len(data))+' is done')
     return True
+
+
+def doc_to_es(item, dialog_id8name):
+    reply_msg, reply_id = '', -1
+    if 'reply_to' in item and 'reply_to_msg_id' in item['reply_to']:
+        reply = db_messages.find_one({'dialog_id': item['dialog_id'], 'id': item['reply_to']['reply_to_msg_id']})
+        if reply:
+            reply_msg = reply['message']
+            reply_id = reply['id']
+    return {
+        '_id': str(item['_id']),
+        'dialog': dialog_id8name[item['dialog_id']],
+        'message': item['message'],
+        'date': str(item['date']),
+        'reply_msg': reply_msg,
+        'user_fn': item.get('user_fn', ''),
+        'username': item.get('username', ''),
+        'date_timestamp': item['date'].replace(tzinfo=pytz.utc).timestamp(),
+        'id': item['id'],
+        'reply_id': reply_id,
+        'dialog_id': item['dialog_id'],
+        'user_id': item.get('user_id', -1),
+    }
 
 
 def update_mongo_to_es(client, index_name):
@@ -126,23 +158,12 @@ def update_mongo_to_es(client, index_name):
     first_data = next(info, None)
     
     if first_data is not None:
-        upsert_data.append(first_data)
+        upsert_data.append(doc_to_es(first_data, dialog_id8name))
         for item in tqdm(info, '数据索引中'):
             if len(upsert_data) >= 10 ** 4:
                 es_bulk(client, index_name, upsert_data)
                 upsert_data = []
-            upsert_data.append({
-                '_id': str(item['_id']),
-                'dialog': dialog_id8name[item['dialog_id']],
-                'message': item['message'],
-                'date': str(item['date']),
-                'user_fn': item.get('user_fn', ''),
-                'username': item.get('username', ''),
-                'date_timestamp': item['date'].replace(tzinfo=pytz.utc).timestamp(),
-                'id': item['id'],
-                'dialog_id': item['dialog_id'],
-                'user_id': item.get('user_id', -1),
-            })
+            upsert_data.append(doc_to_es(item, dialog_id8name))
         if upsert_data:
             es_bulk(client, index_name, upsert_data)
         
@@ -154,7 +175,7 @@ def update_mongo_to_es(client, index_name):
 
 
 if __name__ == "__main__":
-    delete_index(global_es_client, 'telegram')
+    # delete_index(global_es_client, 'telegram')
     while True:
         try:
             info = update_mongo_to_es(global_es_client, 'telegram')

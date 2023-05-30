@@ -51,10 +51,6 @@ def get_dialogs(client: telethon.TelegramClient, collection: Collection = None, 
     dialog_L = []
     exclude_name = set(exclude_name)
     new_name = old_name = upserted_count = 0
-    # 创建索引
-    if collection is not None:
-        for i in ['id', 'title', 'is_group', 'is_channel']:
-            collection.create_index([(i, pymongo.ASCENDING)], unique=False, background=True)
     # 开始获取对话
     for dialog in tqdm(client.iter_dialogs(), 'get_dialogs'):
         if dialog.is_user or dialog.name in exclude_name:
@@ -130,10 +126,6 @@ def get_messages(client: telethon.TelegramClient, dialog_id=-1001078465602,
     if max_id is not None and max_id > 0:
         paras['max_id'] = max_id
     matched_count = modified_count = upserted_count = 0
-    # 创建索引
-    if collection is not None:
-        for i in ['pinned', 'id', 'dialog_id', 'date', 'user_id', 'reply_to.reply_to_msg_id']:
-            collection.create_index([(i, pymongo.ASCENDING)], unique=False, background=True)
     # 开始获取消息
     bar = client.iter_messages(dialog_id, limit=limit, reverse=True, **paras)
     if tqdm_desc is not None:

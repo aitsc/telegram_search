@@ -15,6 +15,18 @@ while True:
         my_db = pymongo.MongoClient(config['mongo_url'])[config['mongo_db']]
         db_messages = my_db['messages']
         db_dialogs = my_db['dialogs']
+        # 创建索引
+        if db_messages is not None:
+            for i in ['pinned', 'id', 'dialog_id', 'date', 'user_id', 'reply_to.reply_to_msg_id']:
+                db_messages.create_index([(i, pymongo.ASCENDING)], unique=False, background=True)
+        db_messages.create_index([
+            ('dialog_id', pymongo.ASCENDING),
+            ('id', pymongo.ASCENDING),
+        ], unique=False, background=True)
+        # 创建索引
+        if db_dialogs is not None:
+            for i in ['id', 'title', 'is_group', 'is_channel']:
+                db_dialogs.create_index([(i, pymongo.ASCENDING)], unique=False, background=True)
         break
     except:
         print('数据库连接失败, 30秒后重新连接')
