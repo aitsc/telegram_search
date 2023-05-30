@@ -3,7 +3,6 @@
 - 可用于中文分词检索, 用户分析, 关键词触发提醒等等
 - 保护隐私, 不记录下载所使用账号的相关信息
 - 大约1万条消息1MB
-- PS: 大家有遇到好的适合搜索资源群也可以分享到 Issues, 共同构建资源库
 
 # 教程
 1. 前往 https://my.telegram.org 获取 api_id 和 api_hash
@@ -24,6 +23,27 @@
 8. 执行 python mongo_analysis.py 统计数据库中的群/频道和用户信息
    - 例如: <img src="stat.png" width = "350" alt="" align=center />
 9. 搭建带有中文分词的es并执行 python es_index.py 将数据索引在es中, 可以用 elasticsearch-head 进行检索
+```json
+{
+  "query": {
+    "function_score": {
+      "query": {
+        "query_string": {
+          "query": "国内 AND nat",
+          "default_field": "reply_msg"
+        }
+      },
+      "script_score": {
+        "script": {
+          "source": "if (_score > 10) { return doc['date_timestamp'].value; } else { return _score; }"
+        }
+      },
+      "boost_mode": "replace"
+    }
+  },
+  "size": 100
+}
+```
 
 # 计划
 - 其他分析, 例如群每日活跃/用户活跃/话题趋势等等

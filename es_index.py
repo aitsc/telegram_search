@@ -122,14 +122,14 @@ def doc_to_es(item, dialog_id8name):
         'dialog': dialog_id8name[item['dialog_id']],
         'message': item['message'],
         'date': str(item['date']),
-        'reply_msg': reply_msg,
-        'user_fn': item.get('user_fn', ''),
-        'username': item.get('username', ''),
+        **({'reply_msg': reply_msg} if reply_msg else {}),
+        **({'user_fn': item['user_fn']} if 'user_fn' in item else {}),
+        **({'username': item['username']} if 'username' in item else {}),
         'date_timestamp': item['date'].replace(tzinfo=pytz.utc).timestamp(),
         'id': item['id'],
-        'reply_id': reply_id,
+        **({'reply_id': reply_id} if reply_msg else {}),
         'dialog_id': item['dialog_id'],
-        'user_id': item.get('user_id', -1),
+        **({'user_id': item['user_id']} if 'user_id' in item else {}),
     }
 
 
@@ -148,9 +148,11 @@ def update_mongo_to_es(client, index_name):
     es_res = client.search(index=index_name, body=body)
     if es_res['hits']['hits']:
         start_time = es_res['hits']['hits'][0]['_source']['date_timestamp']
-        info = db_messages.find({'date': {'$gte': datetime.fromtimestamp(start_time)}}).sort('date', 1)
+        _filter = {'date': {'$gte': datetime.fromtimestamp(start_time)}}
     else:
-        info = db_messages.find({}).sort('date', 1)
+        _filter = {}
+    count = db_messages.count_documents(_filter)
+    info = db_messages.find(_filter).sort('date', 1)
 
     dialog_id8name = {item['id']: item['name'][0]['title'] for item in db_dialogs.find({})}
     upsert_data = []
@@ -159,8 +161,8 @@ def update_mongo_to_es(client, index_name):
     
     if first_data is not None:
         upsert_data.append(doc_to_es(first_data, dialog_id8name))
-        for item in tqdm(info, '数据索引中'):
-            if len(upsert_data) >= 10 ** 4:
+        for item in tqdm(info, '数据索引中', total=count):
+            if len(upsert_data) >= 3000:
                 es_bulk(client, index_name, upsert_data)
                 upsert_data = []
             upsert_data.append(doc_to_es(item, dialog_id8name))
