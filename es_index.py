@@ -155,7 +155,6 @@ def update_mongo_to_es(client, index_name):
         _filter = {'acquisition_time': {'$gte': datetime.fromtimestamp(start_time)}}
     else:
         _filter = {}
-    count = db_messages.count_documents(_filter)
     info = db_messages.find(_filter).sort('acquisition_time', 1)
 
     dialog_id8name = {item['id']: item['name'][0]['title'] for item in db_dialogs.find({})}
@@ -164,6 +163,7 @@ def update_mongo_to_es(client, index_name):
     first_data = next(info, None)
     
     if first_data is not None:
+        count = db_messages.count_documents(_filter)
         upsert_data.append(doc_to_es(first_data, dialog_id8name))
         for item in tqdm(info, '数据索引中', total=count):
             if len(upsert_data) >= 3000:
@@ -190,4 +190,4 @@ if __name__ == "__main__":
                 logging.warn(str(info))
         except:
             traceback.print_exc()
-        time.sleep(10)
+        time.sleep(600)

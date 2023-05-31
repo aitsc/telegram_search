@@ -200,4 +200,4 @@ if __name__ == '__main__':
             get_messages(client, dialog_id=dialog['id'], collection=db_messages,
                          tqdm_desc='{} ID({}): {}'.format(i+1, dialog['id'], dialog['title']))
         print(datetime.now())
-        time.sleep(600)  # 隔多少秒再循环一次
+        time.sleep(3600)  # 隔多少秒再循环一次
