@@ -152,7 +152,7 @@ def update_mongo_to_es(client, index_name):
     es_res = client.search(index=index_name, body=body)
     if es_res['hits']['hits']:
         start_time = es_res['hits']['hits'][0]['_source']['create_timestamp']
-        _filter = {'acquisition_time': {'$gte': datetime.fromtimestamp(start_time)}}
+        _filter = {'acquisition_time': {'$gte': datetime.fromtimestamp(start_time, tz=pytz.utc)}}
     else:
         _filter = {}
     info = db_messages.find(_filter).sort('acquisition_time', 1)
