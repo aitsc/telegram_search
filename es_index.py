@@ -23,50 +23,65 @@ def es_creat(client, index_name):
         return
     index = {
         "settings": {
-            "index": {
-                "codec": "best_compression",
-                "number_of_shards": 4,
-                "number_of_replicas": 0,
-                "analysis": {
-                    "analyzer": {
-                        "default": {
-                            "type": "ik_smart"
-                        }
+            "number_of_shards": 4,
+            "number_of_replicas": 0,
+            "analysis": {
+                "analyzer": {
+                    "default": {
+                        "type": "ik_smart"
                     }
                 }
             }
         },
         "mappings": {
             "properties": {
-                "dialog": {
-                    "type": "text",
-                    "analyzer": "ik_max_word",
-                    "search_analyzer": "ik_smart"
+                "date": {
+                    "type": "date",
+                    "format": "date_optional_time||epoch_millis"
+                },
+                "create_date": {
+                    "type": "date",
+                    "format": "date_optional_time||epoch_millis"
                 },
                 "message": {
                     "type": "text",
                     "analyzer": "ik_max_word",
-                    "search_analyzer": "ik_smart"
-                },
-                "date": {
-                    "type": "text"
+                    "search_analyzer": "ik_smart",
                 },
                 "reply_msg": {
                     "type": "text",
                     "analyzer": "ik_max_word",
-                    "search_analyzer": "ik_smart"
+                    "search_analyzer": "ik_smart",
+                },
+                "dialog": {
+                    "type": "text",
+                    "analyzer": "ik_max_word",
+                    "search_analyzer": "ik_smart",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword",
+                        }
+                    },
                 },
                 "user_fn": {
-                    "type": "text"
+                    "type": "text",
+                    "analyzer": "ik_max_word",
+                    "search_analyzer": "ik_smart",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword",
+                        }
+                    },
                 },
                 "username": {
-                    "type": "text"
-                },
-                "date_timestamp": {
-                    "type": "double"
-                },
-                "create_timestamp": {
-                    "type": "double"
+                    "type": "text",
+                    "analyzer": "ik_max_word",
+                    "search_analyzer": "ik_smart",
+                    "fields": {
+                        "keyword": {
+                            "type": "keyword",
+                        }
+                    },
                 },
                 "id": {
                     "type": "long",
@@ -78,19 +93,19 @@ def es_creat(client, index_name):
                     "type": "long",
                 },
                 "user_id": {
-                    "type": "long"
+                    "type": "long",
                 },
             }
         }
     }
-    client.indices.create(index=index_name, body=index)
-    logging.warn(index_name + ' is created.')
+    client.indices.create(index=index_name, **index)
+    logging.warning(index_name + ' is created.')
 
 
 def delete_index(client, index_name):
     input('确认要删除索引吗? (按回车继续)')
     client.indices.delete(index=index_name)
-    logging.warn(index_name + ' is deleted')
+    logging.warning(index_name + ' is deleted')
 
 
 def es_bulk(client, index_name, data, op_type='index'):
@@ -98,8 +113,7 @@ def es_bulk(client, index_name, data, op_type='index'):
 
     def generate_actions():
         for item in data:
-            _id = item['_id']
-            del item['_id']
+            _id = item.pop('_id')
             if op_type == 'index':
                 yield {
                     '_op_type': op_type,
@@ -124,12 +138,11 @@ def doc_to_es(item, dialog_id8name):
         '_id': str(item['_id']),
         'dialog': dialog_id8name[item['dialog_id']],
         'message': item['message'],
-        'date': str(item['date']),
+        'date': item['date'].strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z',
+        'create_date': item['acquisition_time'].strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z',
         **({'reply_msg': reply_msg} if reply_msg else {}),
         **({'user_fn': item['user_fn']} if 'user_fn' in item else {}),
         **({'username': item['username']} if 'username' in item else {}),
-        'date_timestamp': item['date'].replace(tzinfo=pytz.utc).timestamp(),
-        'create_timestamp': item['acquisition_time'].replace(tzinfo=pytz.utc).timestamp(),
         'id': item['id'],
         **({'reply_id': reply_id} if reply_msg else {}),
         'dialog_id': item['dialog_id'],
@@ -146,12 +159,14 @@ def update_mongo_to_es(client, index_name):
             "match_all": {}
         },
         "sort": {
-            'create_timestamp': {"order": "desc"}
+            'create_date': {"order": "desc"}
         }
     }
-    es_res = client.search(index=index_name, body=body)
+    es_res = client.search(index=index_name, **body)
     if es_res['hits']['hits']:
-        start_time = es_res['hits']['hits'][0]['_source']['create_timestamp']
+        start_time = es_res['hits']['hits'][0]['_source']['create_date']
+        start_time = datetime.strptime(start_time, r"%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=pytz.UTC).timestamp()
+        start_time += 0.001
         _filter = {'acquisition_time': {'$gte': datetime.fromtimestamp(start_time, tz=pytz.utc)}}
     else:
         _filter = {}
@@ -187,7 +202,7 @@ if __name__ == "__main__":
         try:
             info = update_mongo_to_es(global_es_client, index_name)
             if sum(info['num'].values()):
-                logging.warn(str(info))
+                logging.warning(str(info))
         except:
             traceback.print_exc()
         time.sleep(600)
