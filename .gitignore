@@ -1,3 +1,4 @@
 session_name.session*
 config.jsonc
 __pycache__
+test*

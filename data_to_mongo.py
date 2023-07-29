@@ -7,6 +7,7 @@ import bson
 import time
 from pymongo.collection import Collection
 import pytz
+import argparse
 from info import get_te_client, db_dialogs, db_messages, exclude_name
 
 client = get_te_client()
@@ -93,7 +94,8 @@ def get_dialogs(client: telethon.TelegramClient, collection: Collection = None, 
 
 
 def get_messages(client: telethon.TelegramClient, dialog_id=-1001078465602,
-                 min_id=0, max_id=0, limit=None, collection: Collection = None, tqdm_desc='get_messages'):
+                 min_id=0, max_id=0, limit=None, collection: Collection = None, tqdm_desc='get_messages',
+                 excluded_file_ext:set=None, reverse=True):
     """获取一个对话的所有消息
 
     Args:
@@ -104,6 +106,8 @@ def get_messages(client: telethon.TelegramClient, dialog_id=-1001078465602,
         limit (int, optional): 最多返回多少条消息
         collection (Collection, optional): 要存储的mongodb表
         tqdm_desc (str, optional): 进度条前缀, None表示不用进度条
+        excluded_file_ext (set, optional): 排除的文件后缀名
+        reverse (bool, optional): 是否从前向后下载, 小心修改, 改成 False 可能导致中断后丢失最新爬取点
 
     Returns:
         int or list: 有collection则返回数据库保存了多少消息, 否则返回所有消息list
@@ -131,7 +135,7 @@ def get_messages(client: telethon.TelegramClient, dialog_id=-1001078465602,
         paras['max_id'] = max_id
     matched_count = modified_count = upserted_count = 0
     # 开始获取消息
-    bar = client.iter_messages(dialog_id, limit=limit, reverse=True, **paras)
+    bar = client.iter_messages(dialog_id, limit=limit, reverse=reverse, **paras)
     if tqdm_desc is not None:
         print(tqdm_desc)  # 有时 iter_messages 出错
         for message in client.iter_messages(dialog_id, limit=1, reverse=False):
@@ -141,8 +145,14 @@ def get_messages(client: telethon.TelegramClient, dialog_id=-1001078465602,
             if 'min_id' in paras:
                 total -= paras['min_id']
             bar = tqdm(bar, tqdm_desc, total=min(total, limit) if limit else total)
+    skip_ext_count = 0  # 跳过后缀名的消息数量
+    skip_content = 0  # 跳过空内容的消息数量
     for message in bar:
-        if message.message is None or message.message.strip() == '':
+        if (message.message is None or message.message.strip() == '') and not getattr(message.file, 'name', None):
+            skip_content += 1
+            continue
+        if getattr(message.file, 'ext', None) in excluded_file_ext:
+            skip_ext_count += 1
             continue
         message_ = to_int64({
             'pinned': message.pinned,  # bool, 此消息此时是否是置顶帖子
@@ -161,7 +171,7 @@ def get_messages(client: telethon.TelegramClient, dialog_id=-1001078465602,
             'user_fn': getattr(message.sender, 'first_name', None),  # str, 用户 first_name
             'user_ln': getattr(message.sender, 'last_name', None),  # str, 用户 last_name
             'acquisition_time': datetime.utcnow(),  # datetime.datetime, 获取时间
-            'media': to_dict(message.media),  # 媒体
+            'media': to_dict(message.media),  # 媒体, 包含文件大小等各种属性
             'file_name': getattr(message.file, 'name', None),  # 文件名
             'file_ext': getattr(message.file, 'ext', None),  # 文件扩展名
         })
@@ -176,11 +186,26 @@ def get_messages(client: telethon.TelegramClient, dialog_id=-1001078465602,
             matched_count += result.matched_count
             modified_count += result.modified_count
             upserted_count += 1 if result.upserted_id is not None else 0
-    print('matched_count:', matched_count, '; modified_count:', modified_count, '; upserted_count:', upserted_count)
+    print({
+        'matched_count': matched_count,
+        'modified_count': modified_count,
+        'upserted_count': upserted_count,
+        'skip_ext_count': skip_ext_count,
+        'skip_content': skip_content,
+    })
     return upserted_count if upserted_count else message_L
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    # 参数针对 每个群/频道 的首次下载, 循环之后不会再用这些参数. 一般不需要, 防止一些漏下
+    parser.add_argument('-r', action='store_true', help='是否强制从头(编号1)开始下载消息')
+    parser.add_argument("--new_old", default=None, type=int, help="是否在按顺序下载一次后再反向从最新的开始下载一次(并且编号会从头开始,而不是从数据库最新编号开始), 值为最多下载前多少个消息")
+    args = parser.parse_args()
+    
+    excluded_file_ext = {  # 不需要保存的纯文件后缀
+        '.webp', '.webm', '.tgs', '.sticker',  # 表情包
+    }
     client.start()
     # 不断循环获取群和消息
     while True:
@@ -192,6 +217,7 @@ if __name__ == '__main__':
             except BaseException as e:
                 print('出错,10秒后再尝试:', e)
                 time.sleep(10)
+        dialog_L.sort(key=lambda d: d['title'])
         for i, dialog in enumerate(dialog_L):
             now = datetime.utcnow().replace(tzinfo=pytz.timezone('UTC'))
             try:
@@ -201,7 +227,24 @@ if __name__ == '__main__':
             except:
                 print('日期计算出错')
             # 获取消息
-            get_messages(client, dialog_id=dialog['id'], collection=db_messages,
-                         tqdm_desc='{} ID({}): {}'.format(i+1, dialog['id'], dialog['title']))
+            kw = {
+                'dialog_id': dialog['id'],
+                'collection': db_messages,
+                'tqdm_desc': '{} ID({}): {}'.format(i+1, dialog['id'], dialog['title']),
+                'min_id': int(args.r),  # 设为0会自动从数据库中最新开始下载, 否则从min_id开始下载消息
+                'excluded_file_ext': excluded_file_ext,
+            }
+            get_messages(client, **kw)
+            if args.new_old:
+                kw.update({
+                    'min_id': 1,  # 强制从头
+                    'limit': args.new_old,
+                    'reverse': False,
+                    'tqdm_desc': f'new_old {args.new_old}',
+                })
+                get_messages(client, **kw)
         print(datetime.now())
         time.sleep(3600)  # 隔多少秒再循环一次
+        # 参数复原
+        args.r = False
+        args.new_old = None
