@@ -1,7 +1,7 @@
 import telethon
+from telethon.tl import custom, types
 from pprint import pprint
 from tqdm import tqdm
-import pymongo
 from datetime import datetime, timedelta
 import bson
 import time
@@ -47,7 +47,7 @@ def get_dialogs(client: telethon.TelegramClient, collection: Collection = None, 
     Returns:
         list: 所有对话
     """
-    telethon.tl.custom.dialog.Dialog  # dialog
+    dialog: custom.dialog.Dialog
     dialog_L = []
     exclude_name = set(exclude_name)
     new_name = old_name = upserted_count = 0
@@ -55,6 +55,11 @@ def get_dialogs(client: telethon.TelegramClient, collection: Collection = None, 
     for dialog in tqdm(client.iter_dialogs(), 'get_dialogs'):
         if dialog.is_user or dialog.name in exclude_name:
             continue
+        # members = []
+        # for member in client.iter_participants(dialog):
+        #     member: types.User
+        #     members.append(member)
+        # print('members:', len(members), dialog.title)
         dialog_ = to_int64({
             'id': dialog.id,  # int, 对话id
             'date': dialog.date,  # datetime.datetime, 最后一个消息的发布时间
@@ -104,9 +109,8 @@ def get_messages(client: telethon.TelegramClient, dialog_id=-1001078465602,
         int or list: 有collection则返回数据库保存了多少消息, 否则返回所有消息list
     """
     # 使用telegram desktop直接导出涉及的一些字段: ['action', 'actor', 'actor_id', 'date', 'date_unixtime', 'duration_seconds', 'edited', 'edited_unixtime', 'file', 'forwarded_from', 'from', 'from_id', 'height', 'id', 'inviter', 'media_type', 'members', 'mime_type', 'performer', 'photo', 'poll', 'reply_to_message_id', 'saved_from', 'sticker_emoji', 'text', 'thumbnail', 'title', 'type', 'via_bot', 'width']
-    telethon.tl.custom.message.Message  # message
+    message: custom.message.Message  # message
     # {media:{$ne:null},'media.photo':{$exists:false},'media.webpage':{$exists:false},'media.document':{$exists:false},'media.game':{$exists:false}}
-    telethon.tl.types.TypeMessageMedia
 
     def to_dict(x):
         if x is not None:
