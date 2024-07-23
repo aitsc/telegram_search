@@ -138,13 +138,17 @@ def get_messages(client: telethon.TelegramClient, dialog_id=-1001078465602,
     bar = client.iter_messages(dialog_id, limit=limit, reverse=reverse, **paras)
     if tqdm_desc is not None:
         print(tqdm_desc)  # 有时 iter_messages 出错
-        for message in client.iter_messages(dialog_id, limit=1, reverse=False):
-            total = message.id  # 计算总数. 不是太准, 中间可能有删除的消息, 后面也有可能新增消息
-            if 'max_id' in paras:
-                total = min(total, paras['max_id'])
-            if 'min_id' in paras:
-                total -= paras['min_id']
-            bar = tqdm(bar, tqdm_desc, total=min(total, limit) if limit else total)
+        try:
+            for message in client.iter_messages(dialog_id, limit=1, reverse=False):
+                total = message.id  # 计算总数. 不是太准, 中间可能有删除的消息, 后面也有可能新增消息
+                if 'max_id' in paras:
+                    total = min(total, paras['max_id'])
+                if 'min_id' in paras:
+                    total -= paras['min_id']
+                bar = tqdm(bar, tqdm_desc, total=min(total, limit) if limit else total)
+        except telethon.errors.rpcerrorlist.ChannelPrivateError as e:
+            print('ChannelPrivateError:', e)
+            return 0
     skip_ext_count = 0  # 跳过后缀名的消息数量
     skip_content = 0  # 跳过空内容的消息数量
     for message in bar:
