@@ -8,7 +8,7 @@ certifi==2023.7.22
     # via elastic-transport
 commentjson==0.9.0
     # via -r requirements.in
-dnspython==2.4.1
+dnspython==2.7.0
     # via pymongo
 elastic-transport==8.4.0
     # via elasticsearch
@@ -20,7 +20,7 @@ pyaes==1.6.1
     # via telethon
 pyasn1==0.5.0
     # via rsa
-pymongo==4.4.1
+pymongo==4.17.0
     # via -r requirements.in
 pytz==2023.3
     # via -r requirements.in
